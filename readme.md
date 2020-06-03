@@ -1,13 +1,14 @@
-# p-queue [![Build Status](https://travis-ci.org/sindresorhus/p-queue.svg?branch=master)](https://travis-ci.org/sindresorhus/p-queue) [![codecov](https://codecov.io/gh/sindresorhus/p-queue/branch/master/graph/badge.svg)](https://codecov.io/gh/sindresorhus/p-queue)
+# p-queue - deno
 
 > Promise queue with concurrency control
+> Deno compatible
 
 Useful for rate-limiting async (or sync) operations. For example, when interacting with a REST API or when doing CPU/memory intensive tasks.
 
 ## Install
 
-```
-$ npm install p-queue
+```ts
+import { PQueue } from "https://raw.githubusercontent.com/Tnifey/p-queue/master/mod.ts";
 ```
 
 ## Usage
@@ -15,26 +16,7 @@ $ npm install p-queue
 Here we run only one promise at the time. For example, set `concurrency` to 4 to run four promises at the same time.
 
 ```js
-const {default: PQueue} = require('p-queue');
-const got = require('got');
-
-const queue = new PQueue({concurrency: 1});
-
-(async () => {
-	await queue.add(() => got('https://sindresorhus.com'));
-	console.log('Done: sindresorhus.com');
-})();
-
-(async () => {
-	await queue.add(() => got('https://avajs.dev'));
-	console.log('Done: avajs.dev');
-})();
-
-(async () => {
-	const task = await getUnicornTask();
-	await queue.add(task);
-	console.log('Done: Unicorn task');
-})();
+import { PQueue } from "https://raw.githubusercontent.com/Tnifey/p-queue/master/mod.ts";
 ```
 
 ## API
@@ -172,14 +154,14 @@ For example, this can be used to find the number of items remaining in the queue
 ```js
 const queue = new PQueue();
 
-queue.add(async () => '🦄', {priority: 1});
-queue.add(async () => '🦄', {priority: 0});
-queue.add(async () => '🦄', {priority: 1});
+queue.add(async () => "🦄", { priority: 1 });
+queue.add(async () => "🦄", { priority: 0 });
+queue.add(async () => "🦄", { priority: 1 });
 
-console.log(queue.sizeBy({priority: 1}));
+console.log(queue.sizeBy({ priority: 1 }));
 //=> 2
 
-console.log(queue.sizeBy({priority: 0}));
+console.log(queue.sizeBy({ priority: 0 }));
 //=> 1
 ```
 
@@ -201,15 +183,16 @@ Whether the queue is currently paused.
 
 Emitted as each item is processed in the queue for the purpose of tracking progress.
 
-```js
-const delay = require('delay');
-const {default: PQueue} = require('p-queue');
-
-const queue = new PQueue({concurrency: 2});
+```ts
+const queue = new PQueue({ concurrency: 2 });
 
 let count = 0;
-queue.on('active', () => {
-	console.log(`Working on item #${++count}.  Size: ${queue.size}  Pending: ${queue.pending}`);
+queue.on("active", () => {
+	console.log(
+		`Working on item #${++count}.  Size: ${queue.size}  Pending: ${
+			queue.pending
+		}`
+	);
 });
 
 queue.add(() => Promise.resolve());
@@ -218,17 +201,15 @@ queue.add(() => Promise.resolve());
 queue.add(() => Promise.resolve());
 queue.add(() => delay(500));
 ```
+
 #### idle
 
 Emitted every time the queue becomes empty and all promises have completed; `queue.size === 0 && queue.pending === 0`.
 
-```js
-const delay = require('delay');
-const {default: PQueue} = require('p-queue');
-
+```ts
 const queue = new PQueue();
 
-queue.on('idle', () => {
+queue.on("idle", () => {
 	console.log(`Queue is idle.  Size: ${queue.size}  Pending: ${queue.pending}`);
 });
 
@@ -250,10 +231,10 @@ The `idle` event is emitted every time the queue reaches an idle state. On the o
 A more advanced example to help you understand the flow.
 
 ```js
-const delay = require('delay');
-const {default: PQueue} = require('p-queue');
+const delay = require("delay");
+const { default: PQueue } = require("p-queue");
 
-const queue = new PQueue({concurrency: 1});
+const queue = new PQueue({ concurrency: 1 });
 
 (async () => {
 	await delay(200);
@@ -262,34 +243,34 @@ const queue = new PQueue({concurrency: 1});
 	//=> '8. Pending promises: 0'
 
 	(async () => {
-		await queue.add(async () => '🐙');
-		console.log('11. Resolved')
+		await queue.add(async () => "🐙");
+		console.log("11. Resolved");
 	})();
 
-	console.log('9. Added 🐙');
+	console.log("9. Added 🐙");
 
 	console.log(`10. Pending promises: ${queue.pending}`);
 	//=> '10. Pending promises: 1'
 
 	await queue.onIdle();
-	console.log('12. All work is done');
+	console.log("12. All work is done");
 })();
 
 (async () => {
-	await queue.add(async () => '🦄');
-	console.log('5. Resolved')
+	await queue.add(async () => "🦄");
+	console.log("5. Resolved");
 })();
-console.log('1. Added 🦄');
+console.log("1. Added 🦄");
 
 (async () => {
-	await queue.add(async () => '🐴');
-	console.log('6. Resolved')
+	await queue.add(async () => "🐴");
+	console.log("6. Resolved");
 })();
-console.log('2. Added 🐴');
+console.log("2. Added 🐴");
 
 (async () => {
 	await queue.onEmpty();
-	console.log('7. Queue is empty');
+	console.log("7. Queue is empty");
 })();
 
 console.log(`3. Queue size: ${queue.size}`);
@@ -347,20 +328,4 @@ class QueueClass {
 
 ## Related
 
-- [p-limit](https://github.com/sindresorhus/p-limit) - Run multiple promise-returning & async functions with limited concurrency
-- [p-throttle](https://github.com/sindresorhus/p-throttle) - Throttle promise-returning & async functions
-- [p-debounce](https://github.com/sindresorhus/p-debounce) - Debounce promise-returning & async functions
-- [p-all](https://github.com/sindresorhus/p-all) - Run promise-returning & async functions concurrently with optional limited concurrency
-- [More…](https://github.com/sindresorhus/promise-fun)
-
----
-
-<div align="center">
-	<b>
-		<a href="https://tidelift.com/subscription/pkg/npm-p-queue?utm_source=npm-p-queue&utm_medium=referral&utm_campaign=readme">Get professional support for this package with a Tidelift subscription</a>
-	</b>
-	<br>
-	<sub>
-		Tidelift helps make open source sustainable for maintainers while giving companies<br>assurances about security, maintenance, and licensing for their dependencies.
-	</sub>
-</div>
+- [p-queue](https://github.com/sindresorhus/p-queue)

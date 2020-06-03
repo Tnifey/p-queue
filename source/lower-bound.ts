@@ -1,6 +1,10 @@
 // Port of lower_bound from https://en.cppreference.com/w/cpp/algorithm/lower_bound
 // Used to compute insertion index to keep queue sorted after insertion
-export default function lowerBound<T>(array: readonly T[], value: T, comparator: (a: T, b: T) => number): number {
+export default function lowerBound<T>(
+	array: readonly T[],
+	value: T,
+	comparator: (a: T, b: T) => number
+): number {
 	let first = 0;
 	let count = array.length;
 

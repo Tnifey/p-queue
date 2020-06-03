@@ -1,8 +1,12 @@
-import EventEmitter = require('eventemitter3');
-import {default as pTimeout, TimeoutError} from 'p-timeout';
-import {Queue, RunFunction} from './queue';
-import PriorityQueue from './priority-queue';
-import {QueueAddOptions, DefaultAddOptions, Options} from './options';
+import {
+	pTimeout,
+	TimeoutError,
+} from "https://raw.githubusercontent.com/Tnifey/p-timeout/master/mod.ts";
+import { Queue, RunFunction } from "./queue.ts";
+import PriorityQueue from "./priority-queue.ts";
+import { QueueAddOptions, DefaultAddOptions, Options } from "./options.ts";
+
+import EventEmitter from "https://dev.jspm.io/npm:eventemitter3";
 
 type ResolveFunction<T = void> = (value?: T | PromiseLike<T>) => void;
 
@@ -10,7 +14,6 @@ type Task<TaskResultType> =
 	| (() => PromiseLike<TaskResultType>)
 	| (() => TaskResultType);
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
 const empty = (): void => {};
 
 const timeoutError = new TimeoutError();
@@ -18,7 +21,12 @@ const timeoutError = new TimeoutError();
 /**
 Promise queue with concurrency control.
 */
-export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsType> = PriorityQueue, EnqueueOptionsType extends QueueAddOptions = DefaultAddOptions> extends EventEmitter<'active' | 'idle'> {
+export class PQueue<
+	QueueType extends Queue<RunFunction, EnqueueOptionsType> = PriorityQueue,
+	EnqueueOptionsType extends QueueAddOptions = DefaultAddOptions
+>
+	// @ts-ignore
+	extends EventEmitter {
 	private readonly _carryoverConcurrencyCount: boolean;
 
 	private readonly _isIntervalIgnored: boolean;
@@ -31,9 +39,9 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 
 	private _intervalEnd = 0;
 
-	private _intervalId?: NodeJS.Timeout;
+	private _intervalId?: any;
 
-	private _timeoutId?: NodeJS.Timeout;
+	private _timeoutId?: any;
 
 	private _queue: QueueType;
 
@@ -54,9 +62,10 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 
 	private readonly _throwOnTimeout: boolean;
 
+	private mitt: any;
+
 	constructor(options?: Options<QueueType, EnqueueOptionsType>) {
 		super();
-
 		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
 		options = {
 			carryoverConcurrencyCount: false,
@@ -65,19 +74,33 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 			concurrency: Infinity,
 			autoStart: true,
 			queueClass: PriorityQueue,
-			...options
+			...options,
 		} as Options<QueueType, EnqueueOptionsType>;
 
-		if (!(typeof options.intervalCap === 'number' && options.intervalCap >= 1)) {
-			throw new TypeError(`Expected \`intervalCap\` to be a number from 1 and up, got \`${options.intervalCap?.toString() ?? ''}\` (${typeof options.intervalCap})`);
+		if (
+			!(typeof options.intervalCap === "number" && options.intervalCap >= 1)
+		) {
+			throw new TypeError(
+				`Expected \`intervalCap\` to be a number from 1 and up, got \`${
+					options.intervalCap?.toString() ?? ""
+				}\` (${typeof options.intervalCap})`
+			);
 		}
 
-		if (options.interval === undefined || !(Number.isFinite(options.interval) && options.interval >= 0)) {
-			throw new TypeError(`Expected \`interval\` to be a finite number >= 0, got \`${options.interval?.toString() ?? ''}\` (${typeof options.interval})`);
+		if (
+			options.interval === undefined ||
+			!(Number.isFinite(options.interval) && options.interval >= 0)
+		) {
+			throw new TypeError(
+				`Expected \`interval\` to be a finite number >= 0, got \`${
+					options.interval?.toString() ?? ""
+				}\` (${typeof options.interval})`
+			);
 		}
 
 		this._carryoverConcurrencyCount = options.carryoverConcurrencyCount!;
-		this._isIntervalIgnored = options.intervalCap === Infinity || options.interval === 0;
+		this._isIntervalIgnored =
+			options.intervalCap === Infinity || options.interval === 0;
 		this._intervalCap = options.intervalCap;
 		this._interval = options.interval;
 		this._queue = new options.queueClass!();
@@ -108,7 +131,8 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 		if (this._pendingCount === 0) {
 			this._resolveIdle();
 			this._resolveIdle = empty;
-			this.emit('idle');
+			// @ts-ignore
+			this.emit("idle");
 		}
 	}
 
@@ -126,16 +150,15 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 			if (delay < 0) {
 				// Act as the interval was done
 				// We don't need to resume it here because it will be resumed on line 160
-				this._intervalCount = (this._carryoverConcurrencyCount) ? this._pendingCount : 0;
+				this._intervalCount = this._carryoverConcurrencyCount
+					? this._pendingCount
+					: 0;
 			} else {
 				// Act as the interval is pending
 				if (this._timeoutId === undefined) {
-					this._timeoutId = setTimeout(
-						() => {
-							this._onResumeInterval();
-						},
-						delay
-					);
+					this._timeoutId = setTimeout(() => {
+						this._onResumeInterval();
+					}, delay);
 				}
 
 				return true;
@@ -163,7 +186,8 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 		if (!this._isPaused) {
 			const canInitializeInterval = !this._isIntervalPaused();
 			if (this._doesIntervalAllowAnother && this._doesConcurrentAllowAnother) {
-				this.emit('active');
+				// @ts-ignore
+				this.emit("active");
 
 				this._queue.dequeue()!();
 				if (canInitializeInterval) {
@@ -182,23 +206,26 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 			return;
 		}
 
-		this._intervalId = setInterval(
-			() => {
-				this._onInterval();
-			},
-			this._interval
-		);
+		this._intervalId = setInterval(() => {
+			this._onInterval();
+		}, this._interval);
 
 		this._intervalEnd = Date.now() + this._interval;
 	}
 
 	private _onInterval(): void {
-		if (this._intervalCount === 0 && this._pendingCount === 0 && this._intervalId) {
+		if (
+			this._intervalCount === 0 &&
+			this._pendingCount === 0 &&
+			this._intervalId
+		) {
 			clearInterval(this._intervalId);
 			this._intervalId = undefined;
 		}
 
-		this._intervalCount = this._carryoverConcurrencyCount ? this._pendingCount : 0;
+		this._intervalCount = this._carryoverConcurrencyCount
+			? this._pendingCount
+			: 0;
 		this._processQueue();
 	}
 
@@ -215,8 +242,10 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 	}
 
 	set concurrency(newConcurrency: number) {
-		if (!(typeof newConcurrency === 'number' && newConcurrency >= 1)) {
-			throw new TypeError(`Expected \`concurrency\` to be a number from 1 and up, got \`${newConcurrency}\` (${typeof newConcurrency})`);
+		if (!(typeof newConcurrency === "number" && newConcurrency >= 1)) {
+			throw new TypeError(
+				`Expected \`concurrency\` to be a number from 1 and up, got \`${newConcurrency}\` (${typeof newConcurrency})`
+			);
 		}
 
 		this._concurrency = newConcurrency;
@@ -227,24 +256,36 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 	/**
 	Adds a sync or async task to the queue. Always returns a promise.
 	*/
-	async add<TaskResultType>(fn: Task<TaskResultType>, options: Partial<EnqueueOptionsType> = {}): Promise<TaskResultType> {
+	async add<TaskResultType>(
+		fn: Task<TaskResultType>,
+		options: Partial<EnqueueOptionsType> = {}
+	): Promise<TaskResultType> {
 		return new Promise<TaskResultType>((resolve, reject) => {
 			const run = async (): Promise<void> => {
 				this._pendingCount++;
 				this._intervalCount++;
 
 				try {
-					const operation = (this._timeout === undefined && options.timeout === undefined) ? fn() : pTimeout(
-						Promise.resolve(fn()),
-						(options.timeout === undefined ? this._timeout : options.timeout) as number,
-						() => {
-							if (options.throwOnTimeout === undefined ? this._throwOnTimeout : options.throwOnTimeout) {
-								reject(timeoutError);
-							}
+					const operation =
+						this._timeout === undefined && options.timeout === undefined
+							? fn()
+							: pTimeout(
+									Promise.resolve(fn()),
+									(options.timeout === undefined
+										? this._timeout
+										: options.timeout) as number,
+									() => {
+										if (
+											options.throwOnTimeout === undefined
+												? this._throwOnTimeout
+												: options.throwOnTimeout
+										) {
+											reject(timeoutError);
+										}
 
-							return undefined;
-						}
-					);
+										return undefined;
+									}
+							  );
 					resolve(await operation);
 				} catch (error) {
 					reject(error);
@@ -267,7 +308,9 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 		functions: ReadonlyArray<Task<TaskResultsType>>,
 		options?: EnqueueOptionsType
 	): Promise<TaskResultsType[]> {
-		return Promise.all(functions.map(async function_ => this.add(function_, options)));
+		return Promise.all(
+			functions.map(async (function_) => this.add(function_, options))
+		);
 	}
 
 	/**
@@ -309,7 +352,7 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 			return;
 		}
 
-		return new Promise<void>(resolve => {
+		return new Promise<void>((resolve) => {
 			const existingResolve = this._resolveEmpty;
 			this._resolveEmpty = () => {
 				existingResolve();
@@ -329,7 +372,7 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 			return;
 		}
 
-		return new Promise<void>(resolve => {
+		return new Promise<void>((resolve) => {
 			const existingResolve = this._resolveIdle;
 			this._resolveIdle = () => {
 				existingResolve();
@@ -380,4 +423,4 @@ export default class PQueue<QueueType extends Queue<RunFunction, EnqueueOptionsT
 	}
 }
 
-export {Queue, QueueAddOptions, DefaultAddOptions, Options};
+export { Queue, QueueAddOptions, DefaultAddOptions, Options };

@@ -1,10 +1,13 @@
-import {Queue, RunFunction} from './queue';
+import { Queue, RunFunction } from "./queue.ts";
 
 export interface QueueAddOptions {
 	readonly [key: string]: unknown;
 }
 
-export interface Options<QueueType extends Queue<RunFunction, QueueOptions>, QueueOptions extends QueueAddOptions> {
+export interface Options<
+	QueueType extends Queue<RunFunction, QueueOptions>,
+	QueueOptions extends QueueAddOptions
+> {
 	/**
 	Concurrency limit.
 
